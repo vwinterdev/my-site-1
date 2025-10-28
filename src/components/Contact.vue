@@ -22,25 +22,34 @@ const submitForm = async () => {
 
 ${form.value.message}`
 
-    const response = await fetch('/api/contact', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        name: form.value.name,
-        email: form.value.email,
-        message: fullMessage
+    // Проверяем, находимся ли мы в режиме разработки
+    const isDevelopment = import.meta.env.DEV
+
+    if (isDevelopment) {
+      // В режиме разработки показываем сообщение о том, что функция работает только на Vercel
+      throw new Error('Отправка сообщений работает только на продакшене (Vercel). Для тестирования используйте прямые контакты.')
+    } else {
+      // В продакшене отправляем на реальный API
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: form.value.name,
+          email: form.value.email,
+          message: fullMessage
+        })
       })
-    })
 
-    const data = await response.json()
+      const data = await response.json()
 
-    if (!response.ok) {
-      throw new Error(data.error || 'Произошла ошибка при отправке')
+      if (!response.ok) {
+        throw new Error(data.error || 'Произошла ошибка при отправке')
+      }
+
+      isSubmitted.value = true
     }
-
-    isSubmitted.value = true
     
     // Reset form after 5 seconds
     setTimeout(() => {
@@ -55,7 +64,8 @@ ${form.value.message}`
 
   } catch (error: unknown) {
     console.error('Error submitting form:', error)
-    errorMessage.value = error.message || 'Произошла ошибка при отправке сообщения'
+    const errorMsg = error instanceof Error ? error.message : 'Произошла ошибка при отправке сообщения'
+    errorMessage.value = errorMsg
   } finally {
     isSubmitting.value = false
   }
